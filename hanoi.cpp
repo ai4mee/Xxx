@@ -1,79 +1,72 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <cstdlib>
+#include <string_view>
 
 struct Pegs {
     std::vector<int> A, B, C;
 };
 
-std::vector<int>& getPeg(Pegs& pegs, const std::string& name) {
-    if (name == "A") return pegs.A;
-    if (name == "B") return pegs.B;
+std::vector<int>& getPeg(Pegs& pegs, char name) {
+    if (name == 'A') return pegs.A;
+    if (name == 'B') return pegs.B;
     return pegs.C;
 }
 
-void draw(const Pegs& pegs, int n, int step, const std::string& move) {
-    int width = 2 * n + 1;
+void draw(const Pegs& pegs, int n, int step, std::string_view move) {
+    int diskWidth = 2 * n - 1;
+    int pegSpacing = 4;
+    int totalWidth = (diskWidth + pegSpacing) * 3;
 
     std::cout << "\nSchritt " << step << ": " << move << "\n\n";
 
     const std::vector<int>* stacks[3] = {&pegs.A, &pegs.B, &pegs.C};
-    const std::string names[3] = {"A", "B", "C"};
+    char names[3] = {'A', 'B', 'C'};
 
     for (int row = n; row >= 1; --row) {
         for (int i = 0; i < 3; ++i) {
-            std::string cell;
-            int stackSize = (int)stacks[i]->size();
+            int stackSize = static_cast<int>(stacks[i]->size());
+
             if (stackSize >= row) {
-                int disk = (*stacks[i])[row - 1];
-                std::string diskStr(disk, '=');
-                // center diskStr in width
-                int padding = width - (int)diskStr.size();
-                int left = padding / 2;
-                int right = padding - left;
-                cell = std::string(left, ' ') + diskStr + std::string(right, ' ');
+                int diskSize = (*stacks[i])[row - 1];
+                int currentDiskWidth = 2 * diskSize - 1;
+                int padding = (diskWidth - currentDiskWidth) / 2;
+
+                std::cout << std::string(padding, ' ')
+                          << std::string(currentDiskWidth, '=')
+                          << std::string(padding, ' ');
             } else {
-                int left = width / 2;
-                int right = width - left - 1;
-                cell = std::string(left, ' ') + "|" + std::string(right, ' ');
+                int padding = diskWidth / 2;
+                std::cout << std::string(padding, ' ') << "|" << std::string(padding, ' ');
             }
-            std::cout << cell;
-            if (i < 2) std::cout << "  ";
+            std::cout << std::string(pegSpacing, ' ');
         }
         std::cout << "\n";
     }
 
-    // peg labels
     for (int i = 0; i < 3; ++i) {
-        int left = width / 2;
-        int right = width - left - 1;
-        std::string label = std::string(left, ' ') + names[i] + std::string(right, ' ');
-        std::cout << label;
-        if (i < 2) std::cout << "  ";
+        int padding = diskWidth / 2;
+        std::cout << std::string(padding, ' ') << names[i] << std::string(padding, ' ')
+                  << std::string(pegSpacing, ' ');
     }
-    std::cout << "\n";
-    std::cout << std::string(3 * width + 4, '-') << "\n";
+    std::cout << "\n" << std::string(totalWidth, '-') << "\n";
 }
 
-void hanoi(int n, const std::string& source, const std::string& target,
-           const std::string& auxiliary, Pegs& pegs, int total, int& step) {
-    if (n == 1) {
-        ++step;
-        int disk = getPeg(pegs, source).back();
-        getPeg(pegs, source).pop_back();
-        getPeg(pegs, target).push_back(disk);
-        draw(pegs, total, step,
-             "Scheibe " + std::to_string(disk) + ": " + source + " -> " + target);
-        return;
-    }
+void moveDisk(char from, char to, Pegs& pegs, int total, int& step) {
+    step++;
+    int disk = getPeg(pegs, from).back();
+    getPeg(pegs, from).pop_back();
+    getPeg(pegs, to).push_back(disk);
+
+    std::string moveMsg = "Scheibe " + std::to_string(disk) + ": " + from + " -> " + to;
+    draw(pegs, total, step, moveMsg);
+}
+
+void hanoi(int n, char source, char target, char auxiliary, Pegs& pegs, int total, int& step) {
+    if (n == 0) return;
+
     hanoi(n - 1, source, auxiliary, target, pegs, total, step);
-    ++step;
-    int disk = getPeg(pegs, source).back();
-    getPeg(pegs, source).pop_back();
-    getPeg(pegs, target).push_back(disk);
-    draw(pegs, total, step,
-         "Scheibe " + std::to_string(disk) + ": " + source + " -> " + target);
+    moveDisk(source, target, pegs, total, step);
     hanoi(n - 1, auxiliary, target, source, pegs, total, step);
 }
 
@@ -84,9 +77,10 @@ void solve(int n) {
     int step = 0;
     std::cout << "Tuerme von Hanoi mit " << n << " Scheibe(n)\n";
     draw(pegs, n, 0, "Ausgangszustand");
-    hanoi(n, "A", "C", "B", pegs, n, step);
 
-    int optimal = (1 << n) - 1;
+    hanoi(n, 'A', 'C', 'B', pegs, n, step);
+
+    long long optimal = (1LL << n) - 1;
     std::cout << "\nFertig! Benoetigt: " << step
               << " Zuege (Minimum: " << optimal << ")\n";
 }
@@ -97,19 +91,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int n;
     try {
-        n = std::stoi(argv[1]);
+        int n = std::stoi(argv[1]);
+        if (n < 1) throw std::invalid_argument("Zu klein");
+        if (n > 10) {
+            std::cout << "Warnung: Bei n > 10 wird die Ausgabe sehr lang.\n";
+        }
+        solve(n);
     } catch (...) {
-        std::cerr << "Fehler: Anzahl der Scheiben muss eine ganze Zahl sein.\n";
+        std::cerr << "Fehler: Bitte eine positive ganze Zahl angeben.\n";
         return 1;
     }
 
-    if (n < 1) {
-        std::cerr << "Fehler: Mindestens 1 Scheibe erforderlich.\n";
-        return 1;
-    }
-
-    solve(n);
     return 0;
 }
