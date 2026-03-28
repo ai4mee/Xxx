@@ -1,45 +1,66 @@
 #!/usr/bin/env python3
-"""Towers of Hanoi solver for a variable number of disks."""
+"""Towers of Hanoi solver with ASCII visualization."""
 
 import sys
 
 
-def hanoi(n: int, source: str, target: str, auxiliary: str) -> None:
-    """Recursively solve Towers of Hanoi.
+def draw(pegs: dict, n: int, step: int, move: str) -> None:
+    width = 2 * n + 1
+    print(f"\nSchritt {step}: {move}")
+    print()
+    for row in range(n, 0, -1):
+        line = ""
+        for peg in ("A", "B", "C"):
+            stack = pegs[peg]
+            if len(stack) >= row:
+                disk = stack[row - 1]
+                disk_str = ("=" * disk).center(width)
+            else:
+                disk_str = "|".center(width)
+            line += disk_str + "  "
+        print(line)
+    print("  ".join(name.center(width) for name in ("A", "B", "C")))
+    print("-" * (3 * width + 4))
 
-    Args:
-        n: Number of disks to move.
-        source: Name of the source peg.
-        target: Name of the target peg.
-        auxiliary: Name of the auxiliary peg.
-    """
+
+def hanoi(n: int, source: str, target: str, auxiliary: str,
+          pegs: dict, total: int, step: list) -> None:
     if n == 1:
-        print(f"Move disk 1 from {source} to {target}")
+        step[0] += 1
+        disk = pegs[source].pop()
+        pegs[target].append(disk)
+        draw(pegs, total, step[0], f"Scheibe {disk}: {source} -> {target}")
         return
-    hanoi(n - 1, source, auxiliary, target)
-    print(f"Move disk {n} from {source} to {target}")
-    hanoi(n - 1, auxiliary, target, source)
+    hanoi(n - 1, source, auxiliary, target, pegs, total, step)
+    step[0] += 1
+    disk = pegs[source].pop()
+    pegs[target].append(disk)
+    draw(pegs, total, step[0], f"Scheibe {disk}: {source} -> {target}")
+    hanoi(n - 1, auxiliary, target, source, pegs, total, step)
 
 
 def solve(n: int) -> None:
-    print(f"Solving Towers of Hanoi with {n} disk(s):\n")
-    hanoi(n, "A", "C", "B")
-    print(f"\nTotal moves: {2**n - 1}")
+    pegs = {"A": list(range(n, 0, -1)), "B": [], "C": []}
+    step = [0]
+    print(f"Tuerme von Hanoi mit {n} Scheibe(n)")
+    draw(pegs, n, 0, "Ausgangszustand")
+    hanoi(n, "A", "C", "B", pegs, n, step)
+    print(f"\nFertig! Benoetigt: {step[0]} Zuege (Minimum: {2**n - 1})")
 
 
 def main() -> None:
     if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <number_of_disks>")
+        print(f"Verwendung: {sys.argv[0]} <Anzahl_Scheiben>")
         sys.exit(1)
 
     try:
         n = int(sys.argv[1])
     except ValueError:
-        print("Error: Number of disks must be an integer.")
+        print("Fehler: Anzahl der Scheiben muss eine ganze Zahl sein.")
         sys.exit(1)
 
     if n < 1:
-        print("Error: Number of disks must be at least 1.")
+        print("Fehler: Mindestens 1 Scheibe erforderlich.")
         sys.exit(1)
 
     solve(n)
