@@ -52,17 +52,18 @@ void draw(const Pegs& pegs, int n, int step, std::string_view move) {
     std::cout << "\n" << std::string(totalWidth, '-') << "\n";
 }
 
-void moveDisk(char from, char to, Pegs& pegs, int total, int& step) {
+void moveDisk(char from, char to, Pegs& pegs, int total, long long& step) {
     step++;
-    int disk = getPeg(pegs, from).back();
-    getPeg(pegs, from).pop_back();
+    auto& src = getPeg(pegs, from);
+    int disk = src.back();
+    src.pop_back();
     getPeg(pegs, to).push_back(disk);
 
     std::string moveMsg = "Scheibe " + std::to_string(disk) + ": " + from + " -> " + to;
     draw(pegs, total, step, moveMsg);
 }
 
-void hanoi(int n, char source, char target, char auxiliary, Pegs& pegs, int total, int& step) {
+void hanoi(int n, char source, char target, char auxiliary, Pegs& pegs, int total, long long& step) {
     if (n == 0) return;
 
     hanoi(n - 1, source, auxiliary, target, pegs, total, step);
@@ -74,7 +75,7 @@ void solve(int n) {
     Pegs pegs;
     for (int i = n; i >= 1; --i) pegs.A.push_back(i);
 
-    int step = 0;
+    long long step = 0;
     std::cout << "Tuerme von Hanoi mit " << n << " Scheibe(n)\n";
     draw(pegs, n, 0, "Ausgangszustand");
 
@@ -91,17 +92,22 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    int n;
     try {
-        int n = std::stoi(argv[1]);
-        if (n < 1) throw std::invalid_argument("Zu klein");
-        if (n > 10) {
-            std::cout << "Warnung: Bei n > 10 wird die Ausgabe sehr lang.\n";
-        }
-        solve(n);
+        n = std::stoi(argv[1]);
     } catch (...) {
-        std::cerr << "Fehler: Bitte eine positive ganze Zahl angeben.\n";
+        std::cerr << "Fehler: Bitte eine ganze Zahl angeben.\n";
         return 1;
     }
+
+    if (n < 1) {
+        std::cerr << "Fehler: Mindestens 1 Scheibe erforderlich.\n";
+        return 1;
+    }
+    if (n > 10) {
+        std::cout << "Warnung: Bei n > 10 wird die Ausgabe sehr lang.\n";
+    }
+    solve(n);
 
     return 0;
 }
